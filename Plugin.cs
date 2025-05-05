@@ -29,11 +29,11 @@ namespace SPT_Unlocker
         private PatchLootableContainerInitMethod patchLootableContainerInitMethod;
         private PatchExfiltrationPointLoadSettingsMethod patchExfiltrationPointLoadSettingsMethod;
 
-        private bool lastValueUnlockDoorsEnabled;
-        private bool lastValueUnlockContainersEnabled;
-        private bool lastValueUnlockExfilsEnabled;
-        private bool lastValueUnlockPMCScavExfils;
-        private bool lastValueUnlockExfilsAlwaysChance;
+        private bool lastValueUnlockDoorsEnabled = false;
+        private bool lastValueUnlockContainersEnabled = false;
+        private bool lastValueUnlockExfilsEnabled = false;
+        private bool lastValueUnlockPMCScavExfils = false;
+        private bool lastValueUnlockExfilsAlwaysChance = false;
 
         private bool inRaid = false;
         private bool processedRaidStart = false;
@@ -57,12 +57,6 @@ namespace SPT_Unlocker
             UnlockPMCScavExfils = Config.Bind(headerLabelExfils, "Unlock Scav Exfils for PMCs", true);
             UnlockExfilsAlwaysChance = Config.Bind(headerLabelExfils, "Exfil Guaranteed Chance", true);
 
-            lastValueUnlockDoorsEnabled = UnlockDoorsEnabled.Value;
-            lastValueUnlockContainersEnabled = UnlockContainersEnabled.Value;
-            lastValueUnlockExfilsEnabled = UnlockExfilsEnabled.Value;
-            lastValueUnlockPMCScavExfils = UnlockPMCScavExfils.Value;
-            lastValueUnlockExfilsAlwaysChance = UnlockExfilsAlwaysChance.Value;
-
             // uncomment line(s) below to enable desired example patch, then press F6 to build the project:
             // new SimplePatch().Enable();
 
@@ -75,7 +69,7 @@ namespace SPT_Unlocker
                 PatchExfiltrationPointLoadSettingsMethod.AllEntryPoints = UnlockExfilsEnabled.Value;
                 PatchExfiltrationPointLoadSettingsMethod.AlwaysChance = UnlockExfilsAlwaysChance.Value;
                 PatchExfiltrationPointLoadSettingsMethod.PMCUseScavExfils = UnlockPMCScavExfils.Value;
-                new PatchExfiltrationPointLoadSettingsMethod().Enable();
+                patchExfiltrationPointLoadSettingsMethod.Enable();
             }
 
             //if (UnlockPMCScavExfils.Value == true)
@@ -150,6 +144,87 @@ namespace SPT_Unlocker
             processedScavEPs = true;
         }
 
+        private void OpenTransferView()
+        {
+            if ((object)_player != null)
+            {
+                //clientPlayer.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                _player.InventoryController.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                BackendConfigSettingsClass.BTRGlobalSettings btrGlobalSettings = new BackendConfigSettingsClass.BTRGlobalSettings();
+                btrGlobalSettings.LocationsWithBTR = new string[] { _gameWorld.LocationId };
+                btrGlobalSettings.BasePriceTaxi = 0;
+                btrGlobalSettings.AddPriceTaxi = 0;
+                btrGlobalSettings.CleanUpPrice = 0;
+                btrGlobalSettings.DeliveryPrice = 0;
+                btrGlobalSettings.ModDeliveryCost = 0f;
+                btrGlobalSettings.BearPriceMod = 0f;
+                btrGlobalSettings.UsecPriceMod = 0f;
+                btrGlobalSettings.ScavPriceMod = 00f;
+                btrGlobalSettings.CoefficientDiscountCharisma = 0.000f;
+                btrGlobalSettings.TaxiMinPrice = 0;
+                btrGlobalSettings.DeliveryMinPrice = 0;
+                btrGlobalSettings.BotCoverMinPrice = 0;
+                GClass1671 transferController = new GClass1671(_gameWorld, btrGlobalSettings, true);
+                transferController.etraderServiceType_0 = ETraderServiceType.TransitItemsDelivery;
+                new EFT.UI.TransferItemsInRaidScreen.GClass3603(_player.Profile, _player.InventoryController, _player.AbstractQuestControllerClass, new InsuranceCompanyClass(null, _player.Profile), transferController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
+            }
+        }
+
+        private void OpenTransferViewOld()
+        {
+            Player myPlayer = GamePlayerOwner.MyPlayer;
+            //ClientPlayer clientPlayer = myPlayer as ClientPlayer;
+            Player clientPlayer = myPlayer;
+            if ((object)clientPlayer != null)
+            {
+                //clientPlayer.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                clientPlayer.InventoryController.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                new EFT.UI.TransferItemsInRaidScreen.GClass3603(clientPlayer.Profile, clientPlayer.InventoryController, clientPlayer.AbstractQuestControllerClass, new InsuranceCompanyClass(null, clientPlayer.Profile), BTRControllerClass.Instance.TransferItemsController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
+            }
+        }
+
+        private async void ForceTransferComplete()
+        {
+            int methodType = 1;
+            if (methodType == 1)
+            {
+                bool bool_1 = await _player.InventoryController.TryPurchaseTraderService(ETraderServiceType.TransitItemsDelivery, _player.AbstractQuestControllerClass);
+                Plugin.LogSource.LogInfo(bool_1);
+            } else
+            if (methodType == 2)
+            {
+                bool bool_1 = await _player.InventoryController.TryPurchaseTraderService(ETraderServiceType.BtrItemsDelivery, _player.AbstractQuestControllerClass);
+                Plugin.LogSource.LogInfo(bool_1);
+            }
+        }
+
+        private void EnableBTR()
+        {
+            _gameWorld.BtrController.method_10();
+            _gameWorld.BtrController.BtrVehicle.MoveEnable();
+        }
+
+        private async void EnterBTR()
+        {
+            byte sideId = 0;
+            byte placeId = 0;
+            EFT.Vehicle.BTRSide btrSide = _gameWorld.BtrController.BtrView.GetBtrSide(sideId);
+            await _gameWorld.BtrController.BtrView.GoIn(_player, btrSide, placeId, true);
+        }
+
+        private async void ExitBTR()
+        {
+            byte sideId = 0;
+            byte placeId = 0;
+            EFT.Vehicle.BTRSide btrSide = _gameWorld.BtrController.BtrView.GetBtrSide(sideId);
+            await _gameWorld.BtrController.BtrView.GoOut(_player, btrSide, placeId, true);
+        }
+
+        private async void BTRMethod21()
+        {
+            _gameWorld.BtrController.method_21(_player);
+        }
+
         void Update()
         {
             //if (updateCalls % (60*10) == 0)
@@ -187,7 +262,7 @@ namespace SPT_Unlocker
             {
                 lastValueUnlockExfilsEnabled = UnlockExfilsEnabled.Value;
                 PatchExfiltrationPointLoadSettingsMethod.AllEntryPoints = UnlockExfilsEnabled.Value;
-                if (UnlockExfilsEnabled.Value == true)
+                if (UnlockExfilsEnabled.Value == true || UnlockExfilsAlwaysChance.Value == true || UnlockPMCScavExfils.Value == true)
                 {
                     patchExfiltrationPointLoadSettingsMethod.Enable();
                 }
@@ -237,6 +312,35 @@ namespace SPT_Unlocker
                 if (!processedScavEPs)
                 {
                     ProcessScavEPs();
+                }
+            }
+
+            int testId = 0;
+            if (testId > 0)
+            {
+                if (testId == 1)
+                {
+                    OpenTransferView();
+                }
+                if (testId == 2)
+                {
+                    ForceTransferComplete();
+                }
+                if (testId == 3)
+                {
+                    EnableBTR();
+                }
+                if (testId == 4)
+                {
+                    EnterBTR();
+                }
+                if (testId == 5)
+                {
+                    ExitBTR();
+                }
+                if (testId == 6)
+                {
+                    BTRMethod21();
                 }
             }
         }
