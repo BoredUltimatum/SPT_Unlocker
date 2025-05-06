@@ -22,7 +22,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-  </PropertyGroup><PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>Full</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -111,6 +112,7 @@
   <ItemGroup>
     <Compile Include="InRaidUnlockerManager.cs" />
     <Compile Include="PatchDoorBreachableMethods.cs" />
+    <Compile Include="PatchLocalGameStopMethod.cs" />
     <Compile Include="PatchGameWorldOnGameStartedMethod.cs" />
     <Compile Include="PatchScavExfiltrationPointInfiltrationMatchMethod.cs" />
     <Compile Include="PatchScavExfiltrationPointHasMetRequirementsMethod.cs" />

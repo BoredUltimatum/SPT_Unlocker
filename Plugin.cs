@@ -21,19 +21,24 @@ namespace SPT_Unlocker
         public static ConfigEntry<bool> UnlockExfilsEnabled;
         public static ConfigEntry<bool> UnlockPMCScavExfils;
         public static ConfigEntry<bool> UnlockExfilsAlwaysChance;
+        public static ConfigEntry<KeyboardShortcut> OpenItemTransferShortCutConfig;
 
         const string headerLabelDoors = "Doors";
         const string headerLabelExfils = "Exfils";
+        const string headerLabelItemTransfer = "ItemTransfer";
 
         private PatchDoorStartMethod patchDoorStartMethod;
         private PatchLootableContainerInitMethod patchLootableContainerInitMethod;
         private PatchExfiltrationPointLoadSettingsMethod patchExfiltrationPointLoadSettingsMethod;
+        private PatchLocalGameStopMethod patchLocalGameStopMethod;
 
         private bool lastValueUnlockDoorsEnabled = false;
         private bool lastValueUnlockContainersEnabled = false;
         private bool lastValueUnlockExfilsEnabled = false;
         private bool lastValueUnlockPMCScavExfils = false;
         private bool lastValueUnlockExfilsAlwaysChance = false;
+
+        private bool lastValueOpenItemTransferShortCutDown = false;
 
         private bool inRaid = false;
         private bool processedRaidStart = false;
@@ -56,6 +61,7 @@ namespace SPT_Unlocker
             UnlockExfilsEnabled = Config.Bind(headerLabelExfils, "Unlock Exfils Enabled", true);
             UnlockPMCScavExfils = Config.Bind(headerLabelExfils, "Unlock Scav Exfils for PMCs", true);
             UnlockExfilsAlwaysChance = Config.Bind(headerLabelExfils, "Exfil Guaranteed Chance", true);
+            OpenItemTransferShortCutConfig = Config.Bind(headerLabelItemTransfer, "Open Item Transfer Menu", new KeyboardShortcut(UnityEngine.KeyCode.Insert));
 
             // uncomment line(s) below to enable desired example patch, then press F6 to build the project:
             // new SimplePatch().Enable();
@@ -71,6 +77,9 @@ namespace SPT_Unlocker
                 PatchExfiltrationPointLoadSettingsMethod.PMCUseScavExfils = UnlockPMCScavExfils.Value;
                 patchExfiltrationPointLoadSettingsMethod.Enable();
             }
+
+            patchLocalGameStopMethod = new PatchLocalGameStopMethod();
+            patchLocalGameStopMethod.Enable();
 
             //if (UnlockPMCScavExfils.Value == true)
             //{
@@ -166,6 +175,43 @@ namespace SPT_Unlocker
                 btrGlobalSettings.BotCoverMinPrice = 0;
                 GClass1671 transferController = new GClass1671(_gameWorld, btrGlobalSettings, true);
                 transferController.etraderServiceType_0 = ETraderServiceType.TransitItemsDelivery;
+                new EFT.UI.TransferItemsInRaidScreen.GClass3603(_player.Profile, _player.InventoryController, _player.AbstractQuestControllerClass, new InsuranceCompanyClass(null, _player.Profile), transferController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
+            }
+        }
+
+        private void OpenTransferView2()
+        {
+            if ((object)_player != null)
+            {
+                //clientPlayer.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                _player.InventoryController.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                BackendConfigSettingsClass.BTRGlobalSettings btrGlobalSettings = new BackendConfigSettingsClass.BTRGlobalSettings();
+                btrGlobalSettings.LocationsWithBTR = new string[] { _gameWorld.LocationId };
+                btrGlobalSettings.BasePriceTaxi = 0;
+                btrGlobalSettings.AddPriceTaxi = 0;
+                btrGlobalSettings.CleanUpPrice = 0;
+                btrGlobalSettings.DeliveryPrice = 0;
+                btrGlobalSettings.ModDeliveryCost = 0f;
+                btrGlobalSettings.BearPriceMod = 0f;
+                btrGlobalSettings.UsecPriceMod = 0f;
+                btrGlobalSettings.ScavPriceMod = 00f;
+                btrGlobalSettings.CoefficientDiscountCharisma = 0.000f;
+                btrGlobalSettings.TaxiMinPrice = 0;
+                btrGlobalSettings.DeliveryMinPrice = 0;
+                btrGlobalSettings.BotCoverMinPrice = 0;
+                GClass1670 transferController = _gameWorld.TransitController.TransferItemsController;
+                transferController.InitPlayerStash(_player);
+                new EFT.UI.TransferItemsInRaidScreen.GClass3603(_player.Profile, _player.InventoryController, _player.AbstractQuestControllerClass, new InsuranceCompanyClass(null, _player.Profile), transferController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
+            }
+        }
+
+        private void OpenItemTransferView()
+        {
+            if ((object)_player != null)
+            {
+                _player.InventoryController.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
+                GClass1670 transferController = _gameWorld.TransitController.TransferItemsController;
+                transferController.InitPlayerStash(_player);
                 new EFT.UI.TransferItemsInRaidScreen.GClass3603(_player.Profile, _player.InventoryController, _player.AbstractQuestControllerClass, new InsuranceCompanyClass(null, _player.Profile), transferController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
             }
         }
@@ -315,30 +361,48 @@ namespace SPT_Unlocker
                 }
             }
 
+            if (OpenItemTransferShortCutConfig.Value.IsDown())
+            {
+                if (lastValueOpenItemTransferShortCutDown == false)
+                {
+                    // Is a new key press
+                    lastValueOpenItemTransferShortCutDown = true;
+                    OpenItemTransferView();
+                }
+            } else
+            {
+                lastValueOpenItemTransferShortCutDown = false;
+            }
+
+
             int testId = 0;
             if (testId > 0)
             {
-                if (testId == 1)
+                if (testId == 100)
                 {
                     OpenTransferView();
                 }
-                if (testId == 2)
+                if (testId == 101)
+                {
+                    OpenTransferView2();
+                }
+                if (testId == 110)
                 {
                     ForceTransferComplete();
                 }
-                if (testId == 3)
+                if (testId == 200)
                 {
                     EnableBTR();
                 }
-                if (testId == 4)
+                if (testId == 210)
                 {
                     EnterBTR();
                 }
-                if (testId == 5)
+                if (testId == 220)
                 {
                     ExitBTR();
                 }
-                if (testId == 6)
+                if (testId == 230)
                 {
                     BTRMethod21();
                 }
