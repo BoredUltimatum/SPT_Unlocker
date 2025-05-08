@@ -31,6 +31,9 @@ namespace SPT_Unlocker
         private PatchLootableContainerInitMethod patchLootableContainerInitMethod;
         private PatchExfiltrationPointLoadSettingsMethod patchExfiltrationPointLoadSettingsMethod;
         private PatchLocalGameStopMethod patchLocalGameStopMethod;
+        private PatchInteractionsHandlerClassPurchaseTraderServiceMethod patchInteractionsHandlerClassPurchaseTraderServiceMethod;
+        //private PatchTraderControllerClassTryRunNetworkTransactionMethod patchTraderControllerClassTryRunNetworkTransactionMethod;
+        private PatchBaseLocalGameMethod_13Method patchBaseLocalGameMethod_13Method;
 
         private bool lastValueUnlockDoorsEnabled = false;
         private bool lastValueUnlockContainersEnabled = false;
@@ -40,12 +43,15 @@ namespace SPT_Unlocker
 
         private bool lastValueOpenItemTransferShortCutDown = false;
 
+        private bool thisRaidInitPlayerStash = false;
+
         private bool inRaid = false;
         private bool processedRaidStart = false;
         private bool processedScavEPs = false;
         private GameWorld _gameWorld;
         private Player _player;
         private int updateCalls = 0;
+        private int testId = 0;
 
         // BaseUnityPlugin inherits MonoBehaviour, so you can use base unity functions like Awake() and Update()
         private void Awake()
@@ -80,6 +86,13 @@ namespace SPT_Unlocker
 
             patchLocalGameStopMethod = new PatchLocalGameStopMethod();
             patchLocalGameStopMethod.Enable();
+            patchInteractionsHandlerClassPurchaseTraderServiceMethod = new PatchInteractionsHandlerClassPurchaseTraderServiceMethod();
+            patchInteractionsHandlerClassPurchaseTraderServiceMethod.Enable();
+            //patchTraderControllerClassTryRunNetworkTransactionMethod = new PatchTraderControllerClassTryRunNetworkTransactionMethod();
+            //patchTraderControllerClassTryRunNetworkTransactionMethod.Enable();
+            patchBaseLocalGameMethod_13Method = new PatchBaseLocalGameMethod_13Method();
+            patchBaseLocalGameMethod_13Method.Enable();
+
 
             //if (UnlockPMCScavExfils.Value == true)
             //{
@@ -94,6 +107,7 @@ namespace SPT_Unlocker
         private void RaidStart()
         {
             processedRaidStart = true;
+            thisRaidInitPlayerStash = false;
             Plugin.LogSource.LogInfo("Plugin RaidStart()");
             Plugin.LogSource.LogInfo("_gameWorld" + _gameWorld.ToString());
             Plugin.LogSource.LogInfo("_player" + _player.ToString());
@@ -211,7 +225,11 @@ namespace SPT_Unlocker
             {
                 _player.InventoryController.GetTraderServicesDataFromServer("656f0f98d80a697f855d34b1");
                 GClass1670 transferController = _gameWorld.TransitController.TransferItemsController;
-                transferController.InitPlayerStash(_player);
+                if (thisRaidInitPlayerStash == false)
+                {
+                    transferController.InitPlayerStash(_player);
+                    thisRaidInitPlayerStash = true;
+                }
                 new EFT.UI.TransferItemsInRaidScreen.GClass3603(_player.Profile, _player.InventoryController, _player.AbstractQuestControllerClass, new InsuranceCompanyClass(null, _player.Profile), transferController).ShowScreen(EFT.UI.Screens.EScreenState.Queued);
             }
         }
@@ -269,6 +287,56 @@ namespace SPT_Unlocker
         private async void BTRMethod21()
         {
             _gameWorld.BtrController.method_21(_player);
+        }
+
+
+        private GClass1319[] TreeToFlatItems(IEnumerable<EFT.InventoryLogic.Item> rootItems)
+        {
+            ItemFactoryClass itemFactoryClass = Singleton<ItemFactoryClass>.Instance;
+            EFT.InventoryLogic.Item[] source = rootItems.ToArray();
+            IEnumerable<GClass1319> first = source.Select((EFT.InventoryLogic.Item item) => new GClass1319
+            {
+                _id = item.Id,
+                _tpl = item.TemplateId,
+                upd = itemFactoryClass.GetDiff(item)
+            });
+            IEnumerable<GClass1319> second = GClass3760.Flatten(source.OfType<GClass3050>(), (GClass3050 collection) => collection.Containers.SelectMany((EFT.InventoryLogic.IContainer container) => container.Items).OfType<GClass3050>()).SelectMany((GClass3050 collection) => collection.Containers.SelectMany((EFT.InventoryLogic.IContainer container) => container.Items.Where((EFT.InventoryLogic.Item item) => item != null).Select(delegate (EFT.InventoryLogic.Item item)
+            {
+                GClass1319 obj = new GClass1319
+                {
+                    _id = item.Id,
+                    _tpl = item.TemplateId,
+                    parentId = collection.Id,
+                    slotId = container.ID
+                };
+                StashGridClass stashGridClass = container as StashGridClass;
+                object location;
+                if (stashGridClass == null)
+                {
+                    EFT.InventoryLogic.StackSlot stackSlot = container as EFT.InventoryLogic.StackSlot;
+                    location = ((stackSlot != null) ? GClass1682.SaveItemLocation(stackSlot.GetItemPosition((AmmoItemClass)item)) : null);
+                }
+                else
+                {
+                    location = GClass1682.SaveItemLocation(stashGridClass.GetItemLocation(item));
+                }
+
+                obj.location = (GClass825)location;
+                obj.upd = itemFactoryClass.GetDiff(item);
+                return obj;
+            })));
+            return first.Concat(second).ToArray();
+        }
+
+        private GClass1319[] TreeToFlatItems(params EFT.InventoryLogic.Item[] rootItems)
+        {
+            return TreeToFlatItems((IEnumerable<EFT.InventoryLogic.Item>)rootItems);
+        }
+
+        private void CheckTransitInventory()
+        {
+
+            GClass1319[] result = TreeToFlatItems(_gameWorld.TransitController.TransferItemsController.Stash);
         }
 
         void Update()
@@ -374,8 +442,8 @@ namespace SPT_Unlocker
                 lastValueOpenItemTransferShortCutDown = false;
             }
 
-
-            int testId = 0;
+            testId = 0;
+            int nonce = testId + 0;
             if (testId > 0)
             {
                 if (testId == 100)
@@ -405,6 +473,10 @@ namespace SPT_Unlocker
                 if (testId == 230)
                 {
                     BTRMethod21();
+                }
+                if (testId == 300)
+                {
+                    CheckTransitInventory();
                 }
             }
         }

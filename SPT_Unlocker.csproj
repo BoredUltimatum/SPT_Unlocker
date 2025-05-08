@@ -112,6 +112,9 @@
   <ItemGroup>
     <Compile Include="InRaidUnlockerManager.cs" />
     <Compile Include="PatchDoorBreachableMethods.cs" />
+    <Compile Include="PatchInteractionsHandlerClassPurchaseTraderServiceMethod.cs" />
+    <Compile Include="PatchBaseLocalGameMethod_13Method.cs" />
+    <Compile Include="PatchTraderControllerClassTryRunNetworkTransactionMethod.cs" />
     <Compile Include="PatchLocalGameStopMethod.cs" />
     <Compile Include="PatchGameWorldOnGameStartedMethod.cs" />
     <Compile Include="PatchScavExfiltrationPointInfiltrationMatchMethod.cs" />
@@ -120,7 +123,6 @@
     <Compile Include="PatchExfiltrationPointLoadSettingsMethod.cs" />
     <Compile Include="PatchDoorStartMethod.cs" />
     <Compile Include="PatchDoorKickOpenMethods.cs" />
-    <Compile Include="ExamplePatches\SimplePatch.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
